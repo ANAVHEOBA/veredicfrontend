@@ -5,8 +5,8 @@ import CategoryTabs from "@/components/market/CategoryTabs";
 import SubCategoryTabs from "@/components/market/SubCategoryTabs";
 import MarketGrid from "@/components/market/MarketGrid";
 
-export default function Home() {
-  const [activeCategory, setActiveCategory] = useState("trending");
+export default function MarketsPage() {
+  const [activeCategory, setActiveCategory] = useState("all");
   const [activeSubCategory, setActiveSubCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -17,6 +17,16 @@ export default function Home() {
         onCategoryChange={setActiveCategory}
       />
       <main className="max-w-[1600px] mx-auto px-3 md:px-4 py-3 md:py-4 pb-20 md:pb-4">
+        {/* Page Header */}
+        <div className="mb-4 md:mb-6">
+          <h1 className="text-xl md:text-2xl font-bold text-[var(--foreground)] mb-0.5 md:mb-1">
+            All Markets
+          </h1>
+          <p className="text-sm md:text-base text-[var(--gray-500)]">
+            Browse and trade on prediction markets
+          </p>
+        </div>
+
         {/* Sub-category filters */}
         <div className="mb-3 md:mb-4">
           <SubCategoryTabs
@@ -44,7 +54,7 @@ export default function Home() {
             </svg>
             <input
               type="text"
-              placeholder="Search"
+              placeholder="Search markets"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2 bg-white border border-[var(--border)] rounded-lg text-sm focus:outline-none focus:border-[var(--primary)] transition-colors"
