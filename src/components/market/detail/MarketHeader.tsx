@@ -7,12 +7,14 @@ interface MarketHeaderProps {
   market: Market;
   onBookmark?: () => void;
   isBookmarked?: boolean;
+  onShare?: () => void;
 }
 
 export default function MarketHeader({
   market,
   onBookmark,
-  isBookmarked = false
+  isBookmarked = false,
+  onShare
 }: MarketHeaderProps) {
   const { title, image, volume, endTime, category } = market;
 
@@ -88,6 +90,7 @@ export default function MarketHeader({
       <div className="flex items-center gap-2 shrink-0">
         {/* Share */}
         <button
+          onClick={onShare}
           className="p-2 rounded-lg hover:bg-[var(--gray-100)] text-[var(--gray-500)] hover:text-[var(--gray-700)] transition-colors"
           aria-label="Share"
         >

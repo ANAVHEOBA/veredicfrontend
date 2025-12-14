@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useMarket, useEndTrading, useVoidByCreator } from '@/lib/hooks/useMarkets';
 import { useMarketPosition } from '@/lib/hooks/useTokens';
 import { useMarketTradingInfo, useLiquidityPool, usePriceHistory } from '@/lib/hooks/useTrading';
+import { useMarketPrice } from '@/lib/hooks/useMarketPrices';
 import { useAuth } from '@/providers/AuthProvider';
 import MarketHeader from '@/components/market/detail/MarketHeader';
 import TradingPanel from '@/components/trading/TradingPanel';
@@ -14,6 +15,7 @@ import OpenOrdersPanel from '@/components/trading/OpenOrdersPanel';
 import OutcomeRow from '@/components/market/detail/OutcomeRow';
 import PriceChart from '@/components/market/detail/PriceChart';
 import MarketRules from '@/components/market/detail/MarketRules';
+import CommentsSection from '@/components/market/detail/CommentsSection';
 import ConnectModal from '@/components/ui/ConnectModal';
 import TokenPanel from '@/components/token/TokenPanel';
 import UserPosition from '@/components/token/UserPosition';
@@ -82,6 +84,7 @@ export default function MarketDetailPage() {
   const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
   const [voidReason, setVoidReason] = useState('');
   const [showVoidModal, setShowVoidModal] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
 
   // Token position
   const { data: position } = useMarketPosition(marketId);
@@ -89,6 +92,9 @@ export default function MarketDetailPage() {
   // Fetch live pool price - use market.marketId if available
   const { poolId } = useMarketTradingInfo(market?.marketId);
   const { data: pool } = useLiquidityPool(poolId || undefined);
+
+  // Fetch calculated volume from swap events
+  const { volume: calculatedVolume } = useMarketPrice(market?.marketId);
 
   // Mutations
   const endTradingMutation = useEndTrading();
@@ -116,6 +122,15 @@ export default function MarketDetailPage() {
       price: index === 0 ? yesPrice : noPrice,
     }));
   }, [market?.outcomes, liveYesPrice]);
+
+  // Create market with live volume
+  const marketWithVolume = useMemo(() => {
+    if (!market) return market;
+    return {
+      ...market,
+      volume: calculatedVolume || market.volume,
+    };
+  }, [market, calculatedVolume]);
 
   if (isLoading) {
     return <LoadingSkeleton />;
@@ -153,6 +168,34 @@ export default function MarketDetailPage() {
   const handleBookmark = () => {
     setIsBookmarked(!isBookmarked);
     // TODO: Persist bookmark state
+  };
+
+  const handleShare = async () => {
+    const url = window.location.href;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: market?.title || 'Check out this market',
+          url,
+        });
+      } else {
+        await navigator.clipboard.writeText(url);
+        setShowShareToast(true);
+        setTimeout(() => setShowShareToast(false), 2000);
+      }
+    } catch (err) {
+      // User cancelled share or clipboard failed, try clipboard as fallback
+      if ((err as Error).name !== 'AbortError') {
+        try {
+          await navigator.clipboard.writeText(url);
+          setShowShareToast(true);
+          setTimeout(() => setShowShareToast(false), 2000);
+        } catch {
+          // Clipboard not available
+        }
+      }
+    }
   };
 
   const handleEndTrading = async () => {
@@ -193,9 +236,10 @@ export default function MarketDetailPage() {
           <div className="flex items-start gap-2 md:gap-4">
             <div className="flex-1 min-w-0">
               <MarketHeader
-                market={market}
+                market={marketWithVolume!}
                 onBookmark={handleBookmark}
                 isBookmarked={isBookmarked}
+                onShare={handleShare}
               />
             </div>
             <StatusBadge status={market.status} />
@@ -224,7 +268,7 @@ export default function MarketDetailPage() {
                     <OutcomeRow
                       key={outcome.id}
                       outcome={outcome}
-                      volume={market.volume}
+                      volume={calculatedVolume || market.volume}
                     />
                   ))}
                 </div>
@@ -233,6 +277,12 @@ export default function MarketDetailPage() {
 
             {/* Trade History / Activity Feed */}
             <TradeHistory marketId={market.marketId} />
+
+            {/* Comments Section */}
+            <CommentsSection
+              marketId={marketId}
+              onConnect={() => setIsConnectModalOpen(true)}
+            />
 
             {/* Market Rules/Description */}
             <MarketRules
@@ -478,6 +528,16 @@ export default function MarketDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Share Toast */}
+      {showShareToast && (
+        <div className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50 bg-[var(--foreground)] text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium flex items-center gap-2 animate-fade-in">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+          Link copied to clipboard
         </div>
       )}
     </div>
